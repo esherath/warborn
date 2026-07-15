@@ -16,7 +16,7 @@ export default async function ContentAdminPage({ searchParams }: { searchParams:
   const query = await searchParams;
   const error = typeof query.error === "string" ? query.error : undefined;
   const success = typeof query.success === "string" ? query.success : undefined;
-  const posts = user?.role === "admin" ? getPublishedPosts(undefined, 20) : [];
+  const posts = user?.role === "admin" ? await getPublishedPosts(undefined, 20) : [];
   return <InteriorLayout locale={locale} messages={t} user={user} sectionTitle="Administration" sectionItems={adminSectionItems} activeHref="/admin/content" pageTitle="CONTENT PUBLISHER">
       <p className="legacy-intro">Publish official news and updates directly to the Warborn homepage.</p>
       {!user || user.role !== "admin" ? <section className="access-denied"><LockKeyhole /><h2>Administrator access required</h2><p>The first account registered on this installation becomes the initial administrator.</p><Link href="/">Return to homepage</Link></section> : <>

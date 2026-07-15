@@ -2,6 +2,7 @@
 
 # dependencies
 /node_modules
+/services/game-bridge/node_modules/
 /.pnp
 .pnp.*
 .yarn/*

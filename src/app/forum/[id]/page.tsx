@@ -15,9 +15,9 @@ export default async function TopicPage({ params, searchParams }: { params: Para
   const { id } = await params;
   const topicId = Number(id);
   if (!Number.isInteger(topicId)) notFound();
-  const topic = getForumTopic(topicId);
+  const topic = await getForumTopic(topicId);
   if (!topic) notFound();
-  const replies = getForumReplies(topicId);
+  const replies = await getForumReplies(topicId);
   const user = await getCurrentUser();
   const locale = await getLocale(user?.locale);
   const t = getMessages(locale);
@@ -30,12 +30,12 @@ export default async function TopicPage({ params, searchParams }: { params: Para
       {error && <p className="portal-alert error"><ShieldAlert />{error}</p>}
       <article className="forum-post topic-post">
         <aside><strong>{topic.author_name}</strong><span>Player</span><small>Topic author</small></aside>
-        <div><header><h1>{topic.title}</h1><time>{date.format(new Date(`${topic.created_at}Z`))}</time></header><p>{topic.body}</p></div>
+        <div><header><h1>{topic.title}</h1><time>{date.format(new Date(topic.created_at))}</time></header><p>{topic.body}</p></div>
       </article>
       <section id="replies" className="reply-stack">
         {replies.map((reply, index) => <article className="forum-post" key={reply.id}>
           <aside><strong>{reply.author_name}</strong><span>{reply.author_role === "admin" ? "Administrator" : "Player"}</span><small>Reply #{index + 1}</small></aside>
-          <div><header><time>{date.format(new Date(`${reply.created_at}Z`))}</time></header><p>{reply.body}</p></div>
+          <div><header><time>{date.format(new Date(reply.created_at))}</time></header><p>{reply.body}</p></div>
         </article>)}
       </section>
       <section className="portal-panel create-panel">

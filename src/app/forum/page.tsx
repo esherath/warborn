@@ -16,8 +16,10 @@ export default async function ForumPage({ searchParams }: { searchParams: Search
   const query = await searchParams;
   const category = typeof query.category === "string" ? query.category : undefined;
   const error = typeof query.error === "string" ? query.error : undefined;
-  const categories = getForumCategories();
-  const topics = getForumTopics(category);
+  const [categories, topics] = await Promise.all([
+    getForumCategories(),
+    getForumTopics(category),
+  ]);
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" });
 
   const currentCategory = categories.find((item) => item.slug === category);
@@ -33,7 +35,7 @@ export default async function ForumPage({ searchParams }: { searchParams: Search
           {topics.length ? topics.map((topic) => <Link href={`/forum/${topic.id}`} key={topic.id}>
             <div><span>{topic.category_name}</span><h3>{topic.title}</h3></div>
             <strong className="topic-writer">{topic.author_name}</strong>
-            <time>{date.format(new Date(`${topic.updated_at}Z`))}</time>
+            <time>{date.format(new Date(topic.updated_at))}</time>
             <b className="topic-count">{topic.reply_count}</b>
           </Link>) : <p className="empty-state">No topics in this category yet.</p>}
         </div>

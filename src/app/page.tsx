@@ -26,10 +26,12 @@ export default async function Home() {
   const t = getMessages(locale);
   const account = user ? { accountId: user.account_id, nickname: user.nickname, role: user.role } : null;
   const date = new Intl.DateTimeFormat(locale, { year: "numeric", month: "numeric", day: "numeric", timeZone: "UTC" });
-  const publishedNews = getPublishedPosts("news", 4);
-  const publishedUpdates = getPublishedPosts("update", 3);
-  const homeNews = publishedNews.length ? publishedNews.map((post) => ({ id: post.id, title: post.title, date: date.format(new Date(`${post.created_at}Z`)), text: post.summary })) : t.news.map((post) => ({ ...post, id: null }));
-  const homeUpdates = publishedUpdates.length ? publishedUpdates.map((post) => ({ id: post.id, title: post.title, date: date.format(new Date(`${post.created_at}Z`)) })) : [
+  const [publishedNews, publishedUpdates] = await Promise.all([
+    getPublishedPosts("news", 4),
+    getPublishedPosts("update", 3),
+  ]);
+  const homeNews = publishedNews.length ? publishedNews.map((post) => ({ id: post.id, title: post.title, date: date.format(new Date(post.created_at)), text: post.summary })) : t.news.map((post) => ({ ...post, id: null }));
+  const homeUpdates = publishedUpdates.length ? publishedUpdates.map((post) => ({ id: post.id, title: post.title, date: date.format(new Date(post.created_at)) })) : [
     { id: null, title: t.updates.release, date: "7/14/2026" },
     { id: null, title: t.updates.balance, date: "7/08/2026" },
     { id: null, title: t.updates.install, date: "7/01/2026" },
