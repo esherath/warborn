@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Box, Crown, Gem, Gift, Shield, Sparkles, Swords } from "lucide-react";
+import Image from "next/image";
+import { Crown, Gem, Gift, Shield, Sparkles, Swords } from "lucide-react";
 import { AuthPanel } from "@/components/auth-panel";
 import { InteriorHeader } from "@/components/interior-header";
 import type { getMessages, Locale } from "@/lib/i18n";
@@ -54,6 +55,6 @@ export function InteriorLayout({ locale, messages: t, user, sectionTitle, sectio
         <section className="ranking"><h2 className="legacy-rail-title">{t.ranking}</h2>{rankings.map(([level, cls, name], index) => <div className="rank-row" key={name}><b>{level}</b><span>{cls}</span><em>{name}</em>{index < 3 && <Sparkles />}</div>)}</section>
       </aside>
     </div>
-    <footer><div className="footer-logo"><Box /> WARBORN</div><p>{t.footer.rights}</p><nav><a href="#">{t.footer.terms}</a><a href="#">{t.footer.privacy}</a><a href="#">{t.footer.support}</a></nav></footer>
+    <footer><div className="footer-logo"><Image src="/assets/warborn-emblem-transparent-256.png" width={256} height={256} alt="" /> WARBORN</div><p>{t.footer.rights}</p><nav><a href="#">{t.footer.terms}</a><a href="#">{t.footer.privacy}</a><a href="#">{t.footer.support}</a></nav></footer>
   </main>;
 }

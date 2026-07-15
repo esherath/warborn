@@ -1,4 +1,5 @@
-import { BookOpen, Box, Crown, Download, Gem, Gift, Shield, Sparkles, Swords } from "lucide-react";
+import { BookOpen, Crown, Download, Gem, Gift, Shield, Sparkles, Swords } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { AuthPanel } from "@/components/auth-panel";
 import { LocaleSelector } from "@/components/locale-selector";
@@ -86,7 +87,7 @@ export default async function Home() {
           <section className="ranking"><PanelTitle>{t.ranking}</PanelTitle>{rankings.map(([level, cls, name], index) => <div className="rank-row" key={name}><b>{level}</b><span>{cls}</span><em>{name}</em>{index < 3 && <Sparkles />}</div>)}</section>
         </aside>
       </div>
-      <footer><div className="footer-logo"><Box /> WARBORN</div><p>{t.footer.rights}</p><nav><a href="#">{t.footer.terms}</a><a href="#">{t.footer.privacy}</a><a href="#">{t.footer.support}</a></nav></footer>
+      <footer><div className="footer-logo"><Image src="/assets/warborn-emblem-transparent-256.png" width={256} height={256} alt="" /> WARBORN</div><p>{t.footer.rights}</p><nav><a href="#">{t.footer.terms}</a><a href="#">{t.footer.privacy}</a><a href="#">{t.footer.support}</a></nav></footer>
     </main>
   );
 }

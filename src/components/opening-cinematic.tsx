@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 const STORAGE_KEY = "warborn:intro-seen";
 
@@ -54,7 +55,7 @@ export function OpeningCinematic() {
       {Array.from({ length: 12 }, (_, index) => <span key={index} />)}
     </div>
     <div className="opening-lockup">
-      <span className="opening-ornament" aria-hidden="true"><i /></span>
+      <span className="opening-ornament" aria-hidden="true"><Image src="/assets/warborn-emblem-transparent-256.png" width={256} height={256} alt="" /></span>
       <small>THE WAR HAS AWAKENED</small>
       <strong>WARBORN</strong>
       <p>Choose your allegiance. Forge your legend.</p>

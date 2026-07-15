@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { LogIn, UserPlus, X } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { login, logout, register, type AuthState } from "@/app/actions/auth";
 import type { AuthCopy } from "@/lib/i18n";
@@ -20,7 +21,7 @@ function AuthModal({ mode, close, copy, initialAccountId = "" }: { mode: "login"
 
   return <div className="modal-backdrop" onMouseDown={close}><div className="auth-modal" onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-label={copy.accountAccess}>
     <button className="modal-close" onClick={close} aria-label={copy.close}><X /></button>
-    <div className="modal-brand"><span>W</span><h2>WARBORN</h2><p>{copy.tagline}</p></div>
+    <div className="modal-brand"><span className="modal-emblem"><Image src="/assets/warborn-emblem-transparent-256.png" width={256} height={256} alt="" /></span><h2>WARBORN</h2><p>{copy.tagline}</p></div>
     <div className="auth-tabs"><button className={tab === "login" ? "active" : ""} onClick={() => setTab("login")}>{copy.signIn}</button><button className={tab === "register" ? "active" : ""} onClick={() => setTab("register")}>{copy.createAccount}</button></div>
     {tab === "login" ? <form action={loginAction} className="auth-form">
       <label>{copy.accountId}<input name="accountId" autoComplete="username" minLength={4} maxLength={24} required placeholder={copy.accountPlaceholder} defaultValue={initialAccountId} /></label>
