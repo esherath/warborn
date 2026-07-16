@@ -69,6 +69,7 @@ const forumHrefs = ["/news?kind=news", "/news?kind=update", "/forum?category=gen
 
 export function getMenuHref(section: MenuSection, index: number) {
   if (section === "forum") return forumHrefs[index] ?? "/forum";
+  if (section === "shop") return ["/item-mall/charge-points", "/item-mall/purchase-history", "/item-mall/items"][index] ?? "/item-mall/items";
   return `/game/${section}/${slugs[section][index]}`;
 }
 

@@ -69,7 +69,7 @@ export async function register(_state: AuthState, formData: FormData): Promise<A
   const parsed = z.object({
     accountId,
     nickname: z.string().trim().min(3).max(20),
-    email: z.email().trim().toLowerCase(),
+    email: z.email().trim().toLowerCase().max(50),
     password,
     confirmPassword: z.string(),
     terms: z.literal("yes"),
@@ -159,6 +159,10 @@ export async function login(_state: AuthState, formData: FormData): Promise<Auth
   }
 
   if (!user) return { success: false, message: currentCopy.invalidCredentials };
+  const designatedAdmin = process.env.INITIAL_ADMIN_ACCOUNT_ID;
+  if (designatedAdmin && designatedAdmin.toLowerCase() === user.account_id.toLowerCase()) {
+    await executeStatement("UPDATE accounts SET role = 'admin' WHERE id = $1", [user.id]);
+  }
   await executeStatement("UPDATE accounts SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1", [user.id]);
   await createSession(user.id);
   (await cookies()).set("warborn_locale", user.locale, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 60 * 60 * 24 * 365 });

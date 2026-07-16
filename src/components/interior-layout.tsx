@@ -7,7 +7,7 @@ import { InteriorHeader } from "@/components/interior-header";
 import type { getMessages, Locale } from "@/lib/i18n";
 
 type Messages = ReturnType<typeof getMessages>;
-type User = { account_id: string; nickname: string; role: string } | null;
+type User = { account_id: string; nickname: string; role: string; points: number } | null;
 type SectionItem = { label: string; href: string };
 
 const rankings = [
@@ -26,7 +26,7 @@ export function InteriorLayout({ locale, messages: t, user, sectionTitle, sectio
   pageTitle: string;
   children: ReactNode;
 }) {
-  const account = user ? { accountId: user.account_id, nickname: user.nickname, role: user.role } : null;
+  const account = user ? { accountId: user.account_id, nickname: user.nickname, role: user.role, points: user.points } : null;
   return <main className="site-shell legacy-shell">
     <InteriorHeader locale={locale} messages={t} />
     <div className="legacy-content-grid">
@@ -45,7 +45,7 @@ export function InteriorLayout({ locale, messages: t, user, sectionTitle, sectio
       </section>
 
       <aside className="legacy-right-rail">
-        <Link className="premium" href="/#shop"><Crown /><div><span>{t.shop.label}</span><strong>ITEM MALL</strong></div></Link>
+        <Link className="premium" href="/item-mall/items"><Crown /><div><span>{t.shop.label}</span><strong>ITEM MALL</strong></div></Link>
         <section className="item-shop"><h2>{t.shop.featured}</h2>
           <div className="shop-item"><span><Gift /></span><div><b>Founder Chest</b><small>{t.shop.founderDesc}</small></div></div>
           <div className="shop-item"><span><Gem /></span><div><b>Orb of Experience</b><small>{t.shop.orbDesc}</small></div></div>

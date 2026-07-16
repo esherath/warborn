@@ -51,9 +51,9 @@ export async function registerAccount(input) {
   const pool = await getPool();
   const result = await pool.request()
     .input("AccountId", sql.VarChar(24), input.accountId)
-    .input("Nickname", sql.NVarChar(20), input.nickname)
-    .input("Email", sql.NVarChar(320), input.email)
-    .input("Password", sql.NVarChar(72), input.password)
+    .input("Nickname", sql.VarChar(20), input.nickname)
+    .input("Email", sql.VarChar(50), input.email)
+    .input("Password", sql.VarChar(72), input.password)
     .execute(required("GAME_REGISTER_PROCEDURE"));
   const row = result.recordset?.[0];
   if (row?.success === false || row?.success === 0) {
@@ -66,7 +66,7 @@ export async function authenticateAccount(input) {
   const pool = await getPool();
   const result = await pool.request()
     .input("AccountId", sql.VarChar(24), input.accountId)
-    .input("Password", sql.NVarChar(72), input.password)
+    .input("Password", sql.VarChar(72), input.password)
     .execute(required("GAME_AUTHENTICATE_PROCEDURE"));
   const row = result.recordset?.[0];
   if (!row || row.authenticated === false || row.authenticated === 0) {

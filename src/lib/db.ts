@@ -4,6 +4,7 @@ import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
+import { mallItems } from "@/lib/item-mall";
 
 type SqlValue = string | number | boolean | null;
 type Row = Record<string, unknown>;
@@ -28,6 +29,14 @@ const categories = [
   ["bugs", "Bug Reports", "Report game and website issues with useful details.", 4],
 ] as const;
 
+const defaultSettings = [
+  ["server_name", "Vharos"],
+  ["server_status", "ONLINE"],
+  ["maintenance_schedule", "Thu. 05:00 ~ 06:00"],
+  ["mall_announcement", "Character delivery will be connected to the game database next."],
+  ["item_mall_enabled", "true"],
+] as const;
+
 export function getDatabaseMode(): DatabaseMode {
   if (process.env.DATABASE_URL) return "postgres";
   if (process.env.NODE_ENV !== "production" || process.env.WARBORN_USE_SQLITE === "true") return "sqlite";
@@ -40,6 +49,10 @@ export function isWebDatabaseConfigured() {
 
 function sqliteSql(text: string) {
   return text.replace(/\$\d+/g, "?");
+}
+
+function sqliteParams(params: SqlValue[]) {
+  return params.map((value) => typeof value === "boolean" ? Number(value) : value);
 }
 
 function getPostgres() {
@@ -108,13 +121,60 @@ async function initializePostgres() {
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
   )`);
+  await sql.query(`CREATE TABLE IF NOT EXISTS site_settings (
+    key VARCHAR(64) PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await sql.query(`CREATE TABLE IF NOT EXISTS mall_items (
+    id BIGSERIAL PRIMARY KEY,
+    slug VARCHAR(80) NOT NULL UNIQUE,
+    name VARCHAR(120) NOT NULL,
+    category VARCHAR(32) NOT NULL,
+    race VARCHAR(32) NOT NULL,
+    amount INTEGER NOT NULL DEFAULT 1 CHECK (amount > 0),
+    price_points INTEGER NOT NULL CHECK (price_points >= 0),
+    description TEXT NOT NULL,
+    icon VARCHAR(24) NOT NULL DEFAULT 'chest',
+    active BOOLEAN NOT NULL DEFAULT TRUE,
+    featured BOOLEAN NOT NULL DEFAULT FALSE,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await sql.query(`CREATE TABLE IF NOT EXISTS account_points (
+    account_id BIGINT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
+  await sql.query(`CREATE TABLE IF NOT EXISTS point_transactions (
+    id BIGSERIAL PRIMARY KEY,
+    account_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    amount INTEGER NOT NULL,
+    balance_after INTEGER NOT NULL CHECK (balance_after >= 0),
+    reason VARCHAR(240) NOT NULL,
+    admin_id BIGINT NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+  )`);
   await sql.query("CREATE INDEX IF NOT EXISTS news_kind_created_idx ON news_posts(kind, published, created_at DESC)");
   await sql.query("CREATE INDEX IF NOT EXISTS forum_topics_category_idx ON forum_topics(category_id, updated_at DESC)");
   await sql.query("CREATE INDEX IF NOT EXISTS forum_replies_topic_idx ON forum_replies(topic_id, created_at)");
+  await sql.query("CREATE INDEX IF NOT EXISTS mall_items_active_idx ON mall_items(active, category, sort_order)");
+  await sql.query("CREATE INDEX IF NOT EXISTS point_transactions_account_idx ON point_transactions(account_id, created_at DESC)");
 
   for (const category of categories) {
     await sql.query(`INSERT INTO forum_categories (slug, name, description, sort_order)
       VALUES ($1, $2, $3, $4) ON CONFLICT (slug) DO NOTHING`, [...category]);
+  }
+  for (const setting of defaultSettings) {
+    await sql.query(`INSERT INTO site_settings (key, value) VALUES ($1, $2)
+      ON CONFLICT (key) DO NOTHING`, [...setting]);
+  }
+  for (const [index, item] of mallItems.entries()) {
+    await sql.query(`INSERT INTO mall_items
+      (slug, name, category, race, amount, price_points, description, icon, active, featured, sort_order)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,TRUE,$9,$10)
+      ON CONFLICT (slug) DO NOTHING`, [item.id, item.name, item.category, item.race, item.amount, item.points, item.description, item.icon, index < 3, index]);
   }
 }
 
@@ -185,9 +245,46 @@ function getSqlite() {
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS site_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS mall_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    race TEXT NOT NULL,
+    amount INTEGER NOT NULL DEFAULT 1 CHECK (amount > 0),
+    price_points INTEGER NOT NULL CHECK (price_points >= 0),
+    description TEXT NOT NULL,
+    icon TEXT NOT NULL DEFAULT 'chest',
+    active INTEGER NOT NULL DEFAULT 1,
+    featured INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS account_points (
+    account_id INTEGER PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+    balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0),
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS point_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+    amount INTEGER NOT NULL,
+    balance_after INTEGER NOT NULL CHECK (balance_after >= 0),
+    reason TEXT NOT NULL,
+    admin_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE RESTRICT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE INDEX IF NOT EXISTS idx_news_kind_created ON news_posts(kind, published, created_at DESC);
   CREATE INDEX IF NOT EXISTS idx_forum_topics_category ON forum_topics(category_id, updated_at DESC);
-  CREATE INDEX IF NOT EXISTS idx_forum_replies_topic ON forum_replies(topic_id, created_at DESC);`);
+  CREATE INDEX IF NOT EXISTS idx_forum_replies_topic ON forum_replies(topic_id, created_at DESC);
+  CREATE INDEX IF NOT EXISTS idx_mall_items_active ON mall_items(active, category, sort_order);
+  CREATE INDEX IF NOT EXISTS idx_point_transactions_account ON point_transactions(account_id, created_at DESC);`);
 
   const accountColumns = sqlite.prepare("PRAGMA table_info(accounts)").all() as { name: string; notnull: number }[];
   if (!accountColumns.some((column) => column.name === "locale")) sqlite.exec("ALTER TABLE accounts ADD COLUMN locale TEXT NOT NULL DEFAULT 'en-US'");
@@ -196,7 +293,15 @@ function getSqlite() {
   sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_game_account_id_idx ON accounts(game_account_id) WHERE game_account_id IS NOT NULL");
 
   const insertCategory = sqlite.prepare("INSERT OR IGNORE INTO forum_categories (slug, name, description, sort_order) VALUES (?, ?, ?, ?)");
-  const seed = sqlite.transaction(() => categories.forEach((category) => insertCategory.run(...category)));
+  const insertSetting = sqlite.prepare("INSERT OR IGNORE INTO site_settings (key, value) VALUES (?, ?)");
+  const insertMallItem = sqlite.prepare(`INSERT OR IGNORE INTO mall_items
+    (slug, name, category, race, amount, price_points, description, icon, active, featured, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)`);
+  const seed = sqlite.transaction(() => {
+    categories.forEach((category) => insertCategory.run(...category));
+    defaultSettings.forEach((setting) => insertSetting.run(...setting));
+    mallItems.forEach((item, index) => insertMallItem.run(item.id, item.name, item.category, item.race, item.amount, item.points, item.description, item.icon, index < 3 ? 1 : 0, index));
+  });
   seed();
   return sqlite;
 }
@@ -204,7 +309,7 @@ function getSqlite() {
 export async function queryRows<T extends Row>(text: string, params: SqlValue[] = []): Promise<T[]> {
   const mode = getDatabaseMode();
   if (mode === "unconfigured") return [];
-  if (mode === "sqlite") return getSqlite().prepare(sqliteSql(text)).all(...params) as T[];
+  if (mode === "sqlite") return getSqlite().prepare(sqliteSql(text)).all(...sqliteParams(params)) as T[];
   await ensurePostgres();
   return await getPostgres().query(text, params) as T[];
 }
@@ -213,7 +318,7 @@ export async function execute(text: string, params: SqlValue[] = []) {
   const mode = getDatabaseMode();
   if (mode === "unconfigured") throw new DatabaseUnavailableError();
   if (mode === "sqlite") {
-    const result = getSqlite().prepare(sqliteSql(text)).run(...params);
+    const result = getSqlite().prepare(sqliteSql(text)).run(...sqliteParams(params));
     return { rowCount: result.changes, lastInsertId: Number(result.lastInsertRowid) };
   }
   await ensurePostgres();
@@ -225,10 +330,39 @@ export async function executeStatement(text: string, params: SqlValue[] = []) {
   const mode = getDatabaseMode();
   if (mode === "unconfigured") throw new DatabaseUnavailableError();
   if (mode === "sqlite") {
-    const result = getSqlite().prepare(sqliteSql(text)).run(...params);
+    const result = getSqlite().prepare(sqliteSql(text)).run(...sqliteParams(params));
     return result.changes;
   }
   await ensurePostgres();
   const result = await getPostgres().query(text, params);
   return result.length;
+}
+
+export async function adjustPointsAtomic(accountId: number, amount: number, reason: string, adminId: number) {
+  const mode = getDatabaseMode();
+  if (mode === "unconfigured") throw new DatabaseUnavailableError();
+  if (mode === "sqlite") {
+    const database = getSqlite();
+    return database.transaction(() => {
+      const current = database.prepare("SELECT balance FROM account_points WHERE account_id = ?").get(accountId) as { balance: number } | undefined;
+      const nextBalance = Number(current?.balance ?? 0) + amount;
+      if (nextBalance < 0) throw new Error("Insufficient point balance.");
+      database.prepare(`INSERT INTO account_points (account_id, balance, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(account_id) DO UPDATE SET balance = excluded.balance, updated_at = CURRENT_TIMESTAMP`).run(accountId, nextBalance);
+      database.prepare(`INSERT INTO point_transactions (account_id, amount, balance_after, reason, admin_id)
+        VALUES (?, ?, ?, ?, ?)`).run(accountId, amount, nextBalance, reason, adminId);
+      return nextBalance;
+    })();
+  }
+  await ensurePostgres();
+  const rows = await getPostgres().query(`WITH updated AS (
+      INSERT INTO account_points (account_id, balance, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP)
+      ON CONFLICT (account_id) DO UPDATE SET balance = account_points.balance + $2, updated_at = CURRENT_TIMESTAMP
+      WHERE account_points.balance + $2 >= 0 RETURNING balance
+    ), logged AS (
+      INSERT INTO point_transactions (account_id, amount, balance_after, reason, admin_id)
+      SELECT $1, $2, balance, $3, $4 FROM updated RETURNING id
+    ) SELECT balance FROM updated`, [accountId, amount, reason, adminId]) as { balance: number }[];
+  if (!rows[0]) throw new Error("Insufficient point balance.");
+  return Number(rows[0].balance);
 }

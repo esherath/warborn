@@ -12,6 +12,7 @@
     "node": ">=20.9.0"
   },
   "dependencies": {
+    "dotenv": "^17.2.3",
     "mssql": "^11.0.1"
   }
 }

@@ -1,6 +1,10 @@
 import http from "node:http";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import dotenv from "dotenv";
+import { fileURLToPath } from "node:url";
 import { authenticateAccount, healthcheck, registerAccount } from "./sql-server.mjs";
+
+dotenv.config({ path: fileURLToPath(new URL("../../../.env.local", import.meta.url)), quiet: true });
 
 const port = Number(process.env.PORT || 8787);
 const secret = process.env.GAME_BRIDGE_SHARED_SECRET;
@@ -39,7 +43,7 @@ function validateCredentials(input) {
 }
 
 function validateRegistration(input) {
-  return validateCredentials(input) && validateText(input.nickname, 3, 20) && validateText(input.email, 3, 320) && input.email.includes("@");
+  return validateCredentials(input) && validateText(input.nickname, 3, 20) && validateText(input.email, 3, 50) && input.email.includes("@");
 }
 
 async function readBody(req) {

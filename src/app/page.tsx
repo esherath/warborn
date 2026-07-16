@@ -7,6 +7,7 @@ import { MainNavigation } from "@/components/main-navigation";
 import { getPublishedPosts } from "@/lib/content";
 import { getLocale, getMessages } from "@/lib/i18n";
 import { getCurrentUser } from "@/lib/session";
+import { getManagedMallItems, getSiteSettings } from "@/lib/admin-data";
 
 // Canonical game data: class and item names are intentionally never localized.
 const rankings = [
@@ -14,8 +15,6 @@ const rankings = [
   ["93", "Sorceress", "Morrigan"], ["92", "Assassin", "Kael"], ["91", "Guardian", "Brom"],
   ["90", "Mystic", "Lunara"], ["89", "Berserker", "Ragnar"],
 ];
-
-const itemNames = { founder: "Founder Chest", orb: "Orb of Experience", stone: "Return Stone" };
 
 function PanelTitle({ children }: { children: React.ReactNode }) {
   return <h2 className="panel-title"><span>{children}</span></h2>;
@@ -25,12 +24,15 @@ export default async function Home() {
   const user = await getCurrentUser();
   const locale = await getLocale(user?.locale);
   const t = getMessages(locale);
-  const account = user ? { accountId: user.account_id, nickname: user.nickname, role: user.role } : null;
+  const account = user ? { accountId: user.account_id, nickname: user.nickname, role: user.role, points: user.points } : null;
   const date = new Intl.DateTimeFormat(locale, { year: "numeric", month: "numeric", day: "numeric", timeZone: "UTC" });
-  const [publishedNews, publishedUpdates] = await Promise.all([
+  const [publishedNews, publishedUpdates, settings, mallItems] = await Promise.all([
     getPublishedPosts("news", 4),
     getPublishedPosts("update", 3),
+    getSiteSettings(),
+    getManagedMallItems({ activeOnly: true }),
   ]);
+  const featuredItems = mallItems.filter((item) => item.featured).slice(0, 3);
   const homeNews = publishedNews.length ? publishedNews.map((post) => ({ id: post.id, title: post.title, date: date.format(new Date(post.created_at)), text: post.summary })) : t.news.map((post) => ({ ...post, id: null }));
   const homeUpdates = publishedUpdates.length ? publishedUpdates.map((post) => ({ id: post.id, title: post.title, date: date.format(new Date(post.created_at)) })) : [
     { id: null, title: t.updates.release, date: "7/14/2026" },
@@ -61,8 +63,8 @@ export default async function Home() {
             <div className="war-time"><h3>{t.war.guild}</h3><strong>{t.war.saturday}</strong><b>12:00 ~ 13:00 <small>(GMT)</small></b></div>
           </section>
           <section className="rail-panel server-panel"><PanelTitle>{t.server.title}</PanelTitle>
-            <div className="server-row"><b>Vharos</b><span className="online-dot" /><em>ONLINE</em></div>
-            <div className="maintenance"><strong>{t.server.maintenance}</strong><span>{t.server.schedule}</span></div>
+            <div className="server-row"><b>{settings.server_name ?? "Vharos"}</b><span className={`online-dot ${settings.server_status === "OFFLINE" ? "offline" : settings.server_status === "MAINTENANCE" ? "maintenance-dot" : ""}`} /><em>{settings.server_status ?? "ONLINE"}</em></div>
+            <div className="maintenance"><strong>{t.server.maintenance}</strong><span>{settings.maintenance_schedule ?? t.server.schedule}</span></div>
           </section>
         </aside>
 
@@ -77,11 +79,9 @@ export default async function Home() {
         </section>
 
         <aside className="right-rail">
-          <a className="premium" id="shop" href="#"><Crown /><div><span>{t.shop.label}</span><strong>ITEM MALL</strong></div></a>
+          <Link className="premium" id="shop" href="/item-mall/items"><Crown /><div><span>{t.shop.label}</span><strong>ITEM MALL</strong></div></Link>
           <section className="item-shop"><h2>{t.shop.featured}</h2>
-            <div className="shop-item"><span><Gift /></span><div><b>{itemNames.founder}</b><small>{t.shop.founderDesc}</small></div></div>
-            <div className="shop-item"><span><Gem /></span><div><b>{itemNames.orb}</b><small>{t.shop.orbDesc}</small></div></div>
-            <div className="shop-item"><span><Shield /></span><div><b>{itemNames.stone}</b><small>{t.shop.stoneDesc}</small></div></div>
+            {(featuredItems.length ? featuredItems : [{ id:"founder",name:"Founder Chest",description:t.shop.founderDesc },{ id:"orb",name:"Orb of Experience",description:t.shop.orbDesc },{ id:"stone",name:"Return Stone",description:t.shop.stoneDesc }]).map((item, index) => <div className="shop-item" key={item.id}><span>{index === 0 ? <Gift /> : index === 1 ? <Gem /> : <Shield />}</span><div><b>{item.name}</b><small>{item.description}</small></div></div>)}
           </section>
           <a className="merge-guide" href="#"><Swords /><span>{t.guide}</span></a>
           <section className="ranking"><PanelTitle>{t.ranking}</PanelTitle>{rankings.map(([level, cls, name], index) => <div className="rank-row" key={name}><b>{level}</b><span>{cls}</span><em>{name}</em>{index < 3 && <Sparkles />}</div>)}</section>

@@ -17,10 +17,14 @@ export async function getCurrentUser() {
     const token = (await cookies()).get("warborn_session")?.value;
     if (!token) return null;
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
-    const rows = await queryRows<{ id: number; account_id: string; nickname: string; email: string; role: string; locale: string }>(
-      "SELECT id, account_id, nickname, email, role, locale FROM accounts WHERE id = $1 AND status = 'active'",
+    const rows = await queryRows<{ id: number; account_id: string; nickname: string; email: string; role: string; locale: string; points: number }>(
+      `SELECT a.id, a.account_id, a.nickname, a.email, a.role, a.locale,
+        COALESCE(p.balance, 0) AS points
+       FROM accounts a
+       LEFT JOIN account_points p ON p.account_id = a.id
+       WHERE a.id = $1 AND a.status = 'active'`,
       [payload.userId as number],
     );
-    return rows[0] ? { ...rows[0], id: Number(rows[0].id) } : null;
+    return rows[0] ? { ...rows[0], id: Number(rows[0].id), points: Number(rows[0].points) } : null;
   } catch { return null; }
 }

@@ -9,8 +9,10 @@ export const forumSectionItems = [
 ];
 
 export const adminSectionItems = [
-  { label: "Publish Content", href: "/admin/content" },
-  { label: "Latest News", href: "/news?kind=news" },
-  { label: "Update News", href: "/news?kind=update" },
-  { label: "Community Forums", href: "/forum" },
+  { label: "Dashboard", href: "/admin/dashboard" },
+  { label: "News & Updates", href: "/admin/news" },
+  { label: "Forum Moderation", href: "/admin/forum" },
+  { label: "Players & Points", href: "/admin/players" },
+  { label: "Item Mall", href: "/admin/items" },
+  { label: "General Settings", href: "/admin/settings" },
 ];
